@@ -105,45 +105,22 @@ contract UniswapV3PoolTest is Test, IUniswapV3PoolDeployer, IUniswapV3MintCallba
 
         require(tickSpacing != 0);
 
-        pool = UniswapV3Pool(deploy(vm.addr(1), address(WETH), address(USDC),fee,tickSpacing));
-        uint160 sqrtPriceX96 =  1872278214570549032811324048980506;
-        pool.initialize(sqrtPriceX96);
-        (uint160 sqrtPrice,,,,,uint8 feeProtocol,bool unlocked) = pool.slot0();       
-        emit log_uint(sqrtPrice);
-        bytes memory data = abi.encode(address(this));
-        WETH.approve(address(pool),1000000 ether);
-        USDC.approve(address(pool),1000000 ether);
-        // pool.mint(address(this),84222,86129,1517882343751509868544,data);
-        emit log_address(address(this));
-        emit log_address(address(pool));
-        pool.createLimitOrder(address(this),100,10000000);
-        assertTrue(true);
+        pool = pool = deployPool(
+            factory,
+            address(WETH),
+            address(USDC),
+            3000,
+            5000
+        );
+
+        WETH.approve(address(this),1000000 ether);
+        USDC.approve(address(this),1000000 ether);
+        pool.mint(address(this),84222,86129,1517882343751509868544,"");
+        
+        // pool.createLimitOrder(address(this),100,10000000);
     }
 
 
-    function getSlot0Data(UniswapV3Pool _pool) external view returns (
-        uint160 sqrtPriceX96,
-        int24 tick,
-        uint16 observationIndex,
-        uint16 observationCardinality,
-        uint16 observationCardinalityNext,
-        uint8 feeProtocol,
-        bool unlocked
-    ) {
-        return _pool.slot0();
-    }
-
-     function deploy(
-        address factory,
-        address token0,
-        address token1,
-        uint24 fee,
-        int24 tickSpacing
-    ) internal returns (address newPool) {
-        parameters = Parameters({factory: factory, token0: address(token0), token1: address(token1), fee: fee, tickSpacing: tickSpacing});
-        newPool = address(new UniswapV3Pool{salt: keccak256(abi.encode(token0, token1, fee))}());
-        delete parameters;
-    }
 
     function uniswapV3MintCallback(
         uint256 amount0Owed,
