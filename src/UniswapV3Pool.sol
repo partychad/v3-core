@@ -477,7 +477,7 @@ contract UniswapV3Pool is IUniswapV3Pool, NoDelegateCall {
      * @return amount0 The amount of token0 deposited
      * @return amount1 The amount of token1 deposited
      */
-    function createLimitOrder(address recipient, int24 tickLower, uint128 amount) external returns (uint256 amount0, uint256 amount1) { //TODO: add checks for limit order is at or crosses the current price
+    function createLimitOrder(address recipient, int24 tickLower, uint128 amount, bytes calldata data) external returns (uint256 amount0, uint256 amount1) { //TODO: add checks for limit order is at or crosses the current price
         // Get the current tick from slot0
         Slot0 memory slotStatus = slot0;
         int24 currentTick = slotStatus.tick;
@@ -486,7 +486,7 @@ contract UniswapV3Pool is IUniswapV3Pool, NoDelegateCall {
         require(tickLower != currentTick, "Limit order is at the current price");
         require((tickLower < currentTick && tickLower + tickSpacing > currentTick) == false, "Limit order crosses the current price");
         activePositions[(tickLower)].push(recipient);
-        return this.mint(recipient,tickLower, tickLower + tickSpacing, amount, ""); // This was the only way of providing calldata argument to a function call which was supposed to be internal
+        return this.mint(recipient,tickLower, tickLower + tickSpacing, amount, data); // This was the only way of providing calldata argument to a function call which was supposed to be internal
                                                                                     // this.function() idiom makes the contract call itself as if it was making an external call
     }
 

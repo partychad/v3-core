@@ -34,8 +34,7 @@ contract UniswapV3PoolTest is Test, IUniswapV3PoolDeployer, IUniswapV3MintCallba
     function setUp() public {
         WETH = new ERC20Mintable("Ether", "ETH", 18);
         USDC = new ERC20Mintable("USDC", "USDC", 18);
-        WETH.mint(address(this), type(uint256).max);
-        USDC.mint(address(this), type(uint256).max);
+        
         
         feeAmountTickSpacing[500] = 10;
         feeAmountTickSpacing[3000] = 60;
@@ -120,12 +119,11 @@ contract UniswapV3PoolTest is Test, IUniswapV3PoolDeployer, IUniswapV3MintCallba
                 address(USDC),
                 address(this)
             );
-        pool.mint(address(this),360,480,1517882343751509868544,extra);
-        // pool.createLimitOrder(address(this),120,10000000);
+        pool.createLimitOrder(address(this),120,10000000,extra);
 
 
     }
-    function testMintInRange() public {
+    function testBuyETH() public {
         (
             LiquidityRange[] memory liquidity,
             uint256 poolBalance0,
@@ -144,8 +142,44 @@ contract UniswapV3PoolTest is Test, IUniswapV3PoolDeployer, IUniswapV3MintCallba
             );
 
         (uint256 expectedAmount0, uint256 expectedAmount1) = (
-            0.987078348444137445 ether,
+            0 ether,
             5000 ether
+        );
+
+        assertEq(
+            poolBalance0,
+            expectedAmount0,
+            "incorrect weth deposited amount"
+        );
+        assertEq(
+            poolBalance1,
+            expectedAmount1,
+            "incorrect usdc deposited amount"
+        );
+
+    }
+
+    function testBuyUSDC() public {
+        (
+            LiquidityRange[] memory liquidity,
+            uint256 poolBalance0,
+            uint256 poolBalance1
+        ) = setupPool(
+                PoolParams({
+                    balances: [uint256(1 ether), 5000 ether],
+                    currentPrice: 5000,
+                    liquidity: liquidityRanges(
+                        liquidityRange(5500, 5500 + feeAmountTickSpacing[fee], 1 ether, 5000 ether, 5000)
+                    ),
+                    transferInMintCallback: true,
+                    transferInSwapCallback: true,
+                    mintLiqudity: true
+                })
+            );
+
+        (uint256 expectedAmount0, uint256 expectedAmount1) = (
+            1 ether,
+            0 ether
         );
 
         assertEq(
@@ -167,11 +201,16 @@ contract UniswapV3PoolTest is Test, IUniswapV3PoolDeployer, IUniswapV3MintCallba
         uint256 amount1,
         bytes calldata data
     ) public {
-            
-            if (amount0 > 0)
-            ERC20Mintable(WETH).transferFrom(address(this), msg.sender, amount0);
-            if (amount1 > 0)
-            ERC20Mintable(USDC).transferFrom(address(this), msg.sender, amount1);
+            CallbackData memory extra = abi.decode(
+                data,
+                (CallbackData)
+            );
+            if (amount0 > 0) {
+                ERC20Mintable(extra.token0).transferFrom(extra.payer, msg.sender, amount0);
+            }
+            if (amount1 > 0) {
+                ERC20Mintable(extra.token1).transferFrom(extra.payer, msg.sender, amount1);
+            }
 
     }
 
@@ -196,8 +235,13 @@ contract UniswapV3PoolTest is Test, IUniswapV3PoolDeployer, IUniswapV3MintCallba
         );
 
         if (params.mintLiqudity) {
+            
             WETH.approve(address(this), params.balances[0]);
             USDC.approve(address(this), params.balances[1]);
+            bytes memory extra = encodeExtra(
+                            address(WETH),
+                            address(USDC),
+                            address(this));
 
             uint256 poolBalance0Tmp;
             uint256 poolBalance1Tmp;
@@ -205,7 +249,8 @@ contract UniswapV3PoolTest is Test, IUniswapV3PoolDeployer, IUniswapV3MintCallba
                 (poolBalance0Tmp, poolBalance1Tmp) = pool.createLimitOrder(
                     address(this),
                     params.liquidity[i].lowerTick,
-                    params.liquidity[i].amount
+                    params.liquidity[i].amount,
+                    extra
                 );
                 poolBalance0 += poolBalance0Tmp;
                 poolBalance1 += poolBalance1Tmp;
