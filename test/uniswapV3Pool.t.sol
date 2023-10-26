@@ -122,6 +122,7 @@ contract UniswapV3PoolTest is Test, IUniswapV3PoolDeployer, IUniswapV3MintCallba
                 address(USDC),
                 address(this)
             );
+        pool.mint(address(this),360,480,1517882343751509868544,extra);
         // pool.createLimitOrder(address(this),120,10000000);
 
 
