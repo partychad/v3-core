@@ -122,34 +122,11 @@ contract UniswapV3PoolTest is Test, IUniswapV3PoolDeployer, IUniswapV3MintCallba
                 address(USDC),
                 address(this)
             );
-        pool.mint(address(this),360,480,1517882343751509868544,extra);
         // pool.createLimitOrder(address(this),120,10000000);
 
 
     }
 
-
-
-    // function uniswapV3MintCallback(
-    //     uint256 amount0Owed,
-    //     uint256 amount1Owed,
-    //     bytes calldata data
-    // ) public {
-
-    //     emit log_address(IUniswapV3Pool(pool).token0());
-    //     emit log_address(IUniswapV3Pool(pool).token1());
-    //     emit log_uint(ERC20Mintable(IUniswapV3Pool(msg.sender).token0()).balanceOf(msg.sender));
-    //     emit log_uint(ERC20Mintable(IUniswapV3Pool(msg.sender).token0()).balanceOf(address(this)));
-
-
-    //     if (amount0Owed > 0)
-
-    //         ERC20Mintable(IUniswapV3Pool(msg.sender).token0()).transferFrom(address(this), msg.sender, amount0Owed);
-
-    //     if (amount1Owed > 0)
-
-    //         ERC20Mintable(IUniswapV3Pool(msg.sender).token1()).transferFrom(address(this), msg.sender, amount1Owed);
-    // }
 
 
     function uniswapV3MintCallback(
