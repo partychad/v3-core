@@ -14,6 +14,12 @@ import "./ERC20Mintable.sol";
 abstract contract TestUtils is Test {
     mapping(uint24 => uint24) internal tickSpacings;
 
+    struct CallbackData {
+        address token0;
+        address token1;
+        address payer;
+    }
+
     constructor() {
         tickSpacings[500] = 10;
         tickSpacings[3000] = 60;
@@ -59,7 +65,20 @@ abstract contract TestUtils is Test {
                 )
             );
     }
-
+    function encodeExtra(
+        address token0_,
+        address token1_,
+        address payer
+    ) internal pure returns (bytes memory) {
+        return
+            abi.encode(
+                CallbackData({
+                    token0: token0_,
+                    token1: token1_,
+                    payer: payer
+                })
+            );
+    }
     // Calculates sqrtP from price with tick spacing equal to 60;
     function sqrtP60(uint256 price) internal pure returns (uint160) {
         return TickMath.getSqrtRatioAtTick(tick60(price));

@@ -34,8 +34,8 @@ contract UniswapV3PoolTest is Test, IUniswapV3PoolDeployer, IUniswapV3MintCallba
     function setUp() public {
         WETH = new ERC20Mintable("Ether", "ETH", 18);
         USDC = new ERC20Mintable("USDC", "USDC", 18);
-        WETH.mint(address(this), 100000000000 ether);
-        USDC.mint(address(this), 100000000000 ether);
+        WETH.mint(address(this), type(uint256).max);
+        USDC.mint(address(this), type(uint256).max);
         
         feeAmountTickSpacing[500] = 10;
         feeAmountTickSpacing[3000] = 60;
@@ -114,35 +114,56 @@ contract UniswapV3PoolTest is Test, IUniswapV3PoolDeployer, IUniswapV3MintCallba
             3000,
             5000
         );
-        WETH.approve(address(pool),1000000 ether);
-        USDC.approve(address(pool),1000000 ether);
-        pool.mint(address(this),360,480,1517882343751509868544,"");
-        pool.createLimitOrder(address(this),120,10000000);
+        WETH.approve(address(this),type(uint256).max);
+        USDC.approve(address(this),type(uint256).max);
+
+         bytes memory extra = encodeExtra(
+                address(WETH),
+                address(USDC),
+                address(this)
+            );
+        pool.mint(address(this),360,480,1517882343751509868544,extra);
+        // pool.createLimitOrder(address(this),120,10000000);
 
 
     }
 
+
+
+    // function uniswapV3MintCallback(
+    //     uint256 amount0Owed,
+    //     uint256 amount1Owed,
+    //     bytes calldata data
+    // ) public {
+
+    //     emit log_address(IUniswapV3Pool(pool).token0());
+    //     emit log_address(IUniswapV3Pool(pool).token1());
+    //     emit log_uint(ERC20Mintable(IUniswapV3Pool(msg.sender).token0()).balanceOf(msg.sender));
+    //     emit log_uint(ERC20Mintable(IUniswapV3Pool(msg.sender).token0()).balanceOf(address(this)));
+
+
+    //     if (amount0Owed > 0)
+
+    //         ERC20Mintable(IUniswapV3Pool(msg.sender).token0()).transferFrom(address(this), msg.sender, amount0Owed);
+
+    //     if (amount1Owed > 0)
+
+    //         ERC20Mintable(IUniswapV3Pool(msg.sender).token1()).transferFrom(address(this), msg.sender, amount1Owed);
+    // }
 
 
     function uniswapV3MintCallback(
-        uint256 amount0Owed,
-        uint256 amount1Owed,
+        uint256 amount0,
+        uint256 amount1,
         bytes calldata data
     ) public {
+            CallbackData memory extra = abi.decode(
+                data,
+                (CallbackData)
+            );
 
-        emit log_address(IUniswapV3Pool(pool).token0());
-        emit log_address(IUniswapV3Pool(pool).token1());
-
-        if (amount0Owed > 0)
-
-            ERC20Mintable(IUniswapV3Pool(msg.sender).token0()).transferFrom(address(this), msg.sender, amount0Owed);
-
-        if (amount1Owed > 0)
-
-            ERC20Mintable(IUniswapV3Pool(msg.sender).token1()).transferFrom(address(this), msg.sender, amount1Owed);
+            ERC20Mintable(extra.token0).transferFrom(extra.payer, msg.sender, amount0);
+            ERC20Mintable(extra.token1).transferFrom(extra.payer, msg.sender, amount1);
     }
-
-
-    
 
 }
