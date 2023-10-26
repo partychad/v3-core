@@ -164,8 +164,6 @@ contract UniswapV3PoolTest is Test, IUniswapV3PoolDeployer, IUniswapV3MintCallba
 
             ERC20Mintable(extra.token0).transferFrom(extra.payer, msg.sender, amount0);
             ERC20Mintable(extra.token1).transferFrom(extra.payer, msg.sender, amount1);
-            uint balance = ERC20Mintable(extra.token1).balanceOf(msg.sender);
-            emit log_uint(balance);l
 
     }
 
