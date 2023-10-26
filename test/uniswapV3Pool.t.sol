@@ -10,15 +10,15 @@ import "../src/UniswapV3Factory.sol";
 import "../src/libraries/FixedPoint96.sol";
 import "abdk-math/ABDKMath64x64.sol";
 import "./TestUtils.sol";
+import "./UniswapV3Pool.Utils.t.sol";
 
-
-contract UniswapV3PoolTest is Test, IUniswapV3PoolDeployer, IUniswapV3MintCallback, TestUtils {
+contract UniswapV3PoolTest is Test, IUniswapV3PoolDeployer, IUniswapV3MintCallback, TestUtils, UniswapV3PoolUtils {
     ERC20Mintable WETH;
     ERC20Mintable USDC;
     UniswapV3Pool pool;
     UniswapV3Factory factory;
-
-    mapping(uint24 => int24) public  feeAmountTickSpacing;
+    uint24 fee;
+    mapping(uint24 => uint24) public  feeAmountTickSpacing;
     error LOK();
 
      struct Parameters {
@@ -40,6 +40,7 @@ contract UniswapV3PoolTest is Test, IUniswapV3PoolDeployer, IUniswapV3MintCallba
         feeAmountTickSpacing[500] = 10;
         feeAmountTickSpacing[3000] = 60;
         feeAmountTickSpacing[10000] = 200;
+        fee = 3000;
         factory = new UniswapV3Factory();
 
     }
@@ -102,16 +103,13 @@ contract UniswapV3PoolTest is Test, IUniswapV3PoolDeployer, IUniswapV3MintCallba
     function testExample() public {
         emit log_named_address("msg.sender", msg.sender);
         emit log_named_address("this", address(this));
-        uint24 fee = 500;
-        int24 tickSpacing = feeAmountTickSpacing[fee]; 
-
-        require(tickSpacing != 0);
+        
 
         pool = deployPool(
             factory,
             address(WETH),
             address(USDC),
-            3000,
+            fee,
             5000
         );
         WETH.approve(address(this),type(uint256).max);
@@ -127,7 +125,41 @@ contract UniswapV3PoolTest is Test, IUniswapV3PoolDeployer, IUniswapV3MintCallba
 
 
     }
+    function testMintInRange() public {
+        (
+            LiquidityRange[] memory liquidity,
+            uint256 poolBalance0,
+            uint256 poolBalance1
+        ) = setupPool(
+                PoolParams({
+                    balances: [uint256(1 ether), 5000 ether],
+                    currentPrice: 5000,
+                    liquidity: liquidityRanges(
+                        liquidityRange(4545, 4545 + feeAmountTickSpacing[fee], 1 ether, 5000 ether, 5000)
+                    ),
+                    transferInMintCallback: true,
+                    transferInSwapCallback: true,
+                    mintLiqudity: true
+                })
+            );
 
+        (uint256 expectedAmount0, uint256 expectedAmount1) = (
+            0.987078348444137445 ether,
+            5000 ether
+        );
+
+        assertEq(
+            poolBalance0,
+            expectedAmount0,
+            "incorrect weth deposited amount"
+        );
+        assertEq(
+            poolBalance1,
+            expectedAmount1,
+            "incorrect usdc deposited amount"
+        );
+
+    }
 
 
     function uniswapV3MintCallback(
@@ -135,14 +167,52 @@ contract UniswapV3PoolTest is Test, IUniswapV3PoolDeployer, IUniswapV3MintCallba
         uint256 amount1,
         bytes calldata data
     ) public {
-            CallbackData memory extra = abi.decode(
-                data,
-                (CallbackData)
-            );
+            
+            if (amount0 > 0)
+            ERC20Mintable(WETH).transferFrom(address(this), msg.sender, amount0);
+            if (amount1 > 0)
+            ERC20Mintable(USDC).transferFrom(address(this), msg.sender, amount1);
 
-            ERC20Mintable(extra.token0).transferFrom(extra.payer, msg.sender, amount0);
-            ERC20Mintable(extra.token1).transferFrom(extra.payer, msg.sender, amount1);
+    }
 
+
+    function setupPool(PoolParams memory params)
+        internal
+        returns (
+            LiquidityRange[] memory liquidity,
+            uint256 poolBalance0,
+            uint256 poolBalance1
+        )
+    {
+        WETH.mint(address(this), params.balances[0]);
+        USDC.mint(address(this), params.balances[1]);
+
+        pool = deployPool(
+            factory,
+            address(WETH),
+            address(USDC),
+            fee,
+            params.currentPrice
+        );
+
+        if (params.mintLiqudity) {
+            WETH.approve(address(this), params.balances[0]);
+            USDC.approve(address(this), params.balances[1]);
+
+            uint256 poolBalance0Tmp;
+            uint256 poolBalance1Tmp;
+            for (uint256 i = 0; i < params.liquidity.length; i++) {
+                (poolBalance0Tmp, poolBalance1Tmp) = pool.createLimitOrder(
+                    address(this),
+                    params.liquidity[i].lowerTick,
+                    params.liquidity[i].amount
+                );
+                poolBalance0 += poolBalance0Tmp;
+                poolBalance1 += poolBalance1Tmp;
+            }
+        }
+
+        liquidity = params.liquidity;
     }
 
 }
