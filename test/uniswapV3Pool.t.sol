@@ -12,8 +12,8 @@ import "abdk-math/ABDKMath64x64.sol";
 
 
 contract UniswapV3PoolTest is Test, IUniswapV3PoolDeployer, IUniswapV3MintCallback {
-    ERC20Mintable customToken0;
-    ERC20Mintable customToken1;
+    ERC20Mintable WETH;
+    ERC20Mintable USDC;
     UniswapV3Pool pool;
     UniswapV3Factory factory;
 
@@ -31,10 +31,11 @@ contract UniswapV3PoolTest is Test, IUniswapV3PoolDeployer, IUniswapV3MintCallba
     Parameters public override parameters;
 
     function setUp() public {
-        customToken0 = new ERC20Mintable("Ether", "ETH", 18);
-        customToken1 = new ERC20Mintable("USDC", "USDC", 18);
-        customToken0.mint(address(this), 10 ether);
-        customToken1.mint(address(this), 1000 ether);
+        WETH = new ERC20Mintable("Ether", "ETH", 18);
+        USDC = new ERC20Mintable("USDC", "USDC", 18);
+        WETH.mint(address(this), 10 ether);
+        USDC.mint(address(this), 1000 ether);
+        
         feeAmountTickSpacing[500] = 10;
         feeAmountTickSpacing[3000] = 60;
         feeAmountTickSpacing[10000] = 200;
@@ -44,7 +45,7 @@ contract UniswapV3PoolTest is Test, IUniswapV3PoolDeployer, IUniswapV3MintCallba
 
     function testInitialize() public {
         pool = UniswapV3Pool(
-            factory.createPool(address(customToken0), address(customToken1), 3000)
+            factory.createPool(address(WETH), address(USDC), 3000)
         );
 
         (
@@ -104,14 +105,14 @@ contract UniswapV3PoolTest is Test, IUniswapV3PoolDeployer, IUniswapV3MintCallba
 
         require(tickSpacing != 0);
 
-        pool = UniswapV3Pool(deploy(vm.addr(1), address(customToken0), address(customToken1),fee,tickSpacing));
+        pool = UniswapV3Pool(deploy(vm.addr(1), address(WETH), address(USDC),fee,tickSpacing));
         uint160 sqrtPriceX96 =  1872278214570549032811324048980506;
         pool.initialize(sqrtPriceX96);
         (uint160 sqrtPrice,,,,,uint8 feeProtocol,bool unlocked) = pool.slot0();       
         emit log_uint(sqrtPrice);
         bytes memory data = abi.encode(address(this));
-        customToken0.approve(address(pool),1000000 ether);
-        customToken1.approve(address(pool),1000000 ether);
+        WETH.approve(address(pool),1000000 ether);
+        USDC.approve(address(pool),1000000 ether);
         // pool.mint(address(this),84222,86129,1517882343751509868544,data);
         emit log_address(address(this));
         emit log_address(address(pool));
