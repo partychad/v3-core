@@ -531,6 +531,7 @@ contract UniswapV3Pool is IUniswapV3Pool, NoDelegateCall {
         uint256 balance1Before;
         if (amount0 > 0) balance0Before = balance0();
         if (amount1 > 0) balance1Before = balance1();
+
         IUniswapV3MintCallback(msg.sender).uniswapV3MintCallback(amount0, amount1, data);
         if (amount0 > 0 && balance0Before + amount0 > balance0()) revert M0();
         if (amount1 > 0 && balance1Before + amount1 > balance1()) revert M1();

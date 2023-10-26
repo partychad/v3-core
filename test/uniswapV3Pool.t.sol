@@ -9,9 +9,10 @@ import {UniswapV3Pool} from '../src/UniswapV3Pool.sol';
 import "../src/UniswapV3Factory.sol";
 import "../src/libraries/FixedPoint96.sol";
 import "abdk-math/ABDKMath64x64.sol";
+import "./TestUtils.sol";
 
 
-contract UniswapV3PoolTest is Test, IUniswapV3PoolDeployer, IUniswapV3MintCallback {
+contract UniswapV3PoolTest is Test, IUniswapV3PoolDeployer, IUniswapV3MintCallback, TestUtils {
     ERC20Mintable WETH;
     ERC20Mintable USDC;
     UniswapV3Pool pool;
@@ -33,8 +34,8 @@ contract UniswapV3PoolTest is Test, IUniswapV3PoolDeployer, IUniswapV3MintCallba
     function setUp() public {
         WETH = new ERC20Mintable("Ether", "ETH", 18);
         USDC = new ERC20Mintable("USDC", "USDC", 18);
-        WETH.mint(address(this), 10 ether);
-        USDC.mint(address(this), 1000 ether);
+        WETH.mint(address(this), 100000000000 ether);
+        USDC.mint(address(this), 100000000000 ether);
         
         feeAmountTickSpacing[500] = 10;
         feeAmountTickSpacing[3000] = 60;
@@ -99,25 +100,26 @@ contract UniswapV3PoolTest is Test, IUniswapV3PoolDeployer, IUniswapV3MintCallba
    
 
     function testExample() public {
-        
+        emit log_named_address("msg.sender", msg.sender);
+        emit log_named_address("this", address(this));
         uint24 fee = 500;
         int24 tickSpacing = feeAmountTickSpacing[fee]; 
 
         require(tickSpacing != 0);
 
-        pool = pool = deployPool(
+        pool = deployPool(
             factory,
             address(WETH),
             address(USDC),
             3000,
             5000
         );
+        WETH.approve(address(pool),1000000 ether);
+        USDC.approve(address(pool),1000000 ether);
+        pool.mint(address(this),360,480,1517882343751509868544,"");
+        pool.createLimitOrder(address(this),120,10000000);
 
-        WETH.approve(address(this),1000000 ether);
-        USDC.approve(address(this),1000000 ether);
-        pool.mint(address(this),84222,86129,1517882343751509868544,"");
-        
-        // pool.createLimitOrder(address(this),100,10000000);
+
     }
 
 
@@ -127,44 +129,20 @@ contract UniswapV3PoolTest is Test, IUniswapV3PoolDeployer, IUniswapV3MintCallba
         uint256 amount1Owed,
         bytes calldata data
     ) public {
-                if (5 != 3) revert LOK();
 
         emit log_address(IUniswapV3Pool(pool).token0());
         emit log_address(IUniswapV3Pool(pool).token1());
 
         if (amount0Owed > 0)
-            ERC20Mintable(IUniswapV3Pool(msg.sender).token0()).transfer(msg.sender, amount0Owed);
+
+            ERC20Mintable(IUniswapV3Pool(msg.sender).token0()).transferFrom(address(this), msg.sender, amount0Owed);
+
         if (amount1Owed > 0)
-            ERC20Mintable(IUniswapV3Pool(msg.sender).token1()).transfer(msg.sender, amount1Owed);
+
+            ERC20Mintable(IUniswapV3Pool(msg.sender).token1()).transferFrom(address(this), msg.sender, amount1Owed);
     }
 
 
-    function sqrtP(uint256 price) internal pure returns (uint160) {
-        return
-            uint160(
-                int160(
-                    ABDKMath64x64.sqrt(int128(int256(price << 64))) <<
-                        (FixedPoint96.RESOLUTION - 64)
-                )
-            );
-    }
+    
 
-    function encodeError(string memory error)
-        internal
-        pure
-        returns (bytes memory encoded)
-    {
-        encoded = abi.encodeWithSignature(error);
-    }
-
-     function deployPool(
-        UniswapV3Factory factory,
-        address token0,
-        address token1,
-        uint24 fee,
-        uint256 currentPrice
-    ) internal returns (UniswapV3Pool pool) {
-        pool = UniswapV3Pool(factory.createPool(token0, token1, fee));
-        pool.initialize(sqrtP(currentPrice));
-    }
 }
